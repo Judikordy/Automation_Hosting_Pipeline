@@ -1,0 +1,28 @@
+pipeline {
+  agent any
+
+  stages {
+    stage('Checkout'){
+      steps {
+        // Pull latest code from Github
+        git url: 'https://github.com/Judikordy/Automation_Hosting_Pipeline.git', branch: 'main', credentialsId: 'd4a3d8ac-4d36-4253-83dd-6c932125da3c'
+      }
+    }
+
+    stage('Deploy to Firebase') {
+      steps {
+        // Deploy using Firebase CLI
+        echo 'Deploying now...'
+      }
+    }
+  }
+
+  post {
+    succes {
+      echo 'Deployment completed successfully!'
+    }
+    failure {
+      echo 'Deployment failed!'
+    }
+  }
+}
