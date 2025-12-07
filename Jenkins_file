@@ -1,14 +1,19 @@
 pipeline {
     agent any
 
+    options {
+        skipDefaultCheckout(true)      // Crucial line
+        disableConcurrentBuilds()      // Bonus: prevents overlapping builds
+    }
+
     triggers {
-        pollSCM('H/2 * * * *')
+        pollSCM('H/5 * * * *')
     }
 
     environment {
-        FIREBASE_PROJECT_ID      = 'automation-hosting'
-        PUBLIC_DIR               = 'dist'                          
-        FIREBASE_TOKEN_CREDENTIALS = 'firebase-service-account-json'
+        FIREBASE_PROJECT_ID         = 'automation-hosting'
+        PUBLIC_DIR                  = 'dist'
+        FIREBASE_TOKEN_CREDENTIALS  = 'firebase-service-account-json'
     }
 
     stages {
@@ -40,13 +45,12 @@ pipeline {
                 echo 'Deploying to Firebase Hosting...'
                 withCredentials([string(credentialsId: env.FIREBASE_TOKEN_CREDENTIALS, variable: 'FIREBASE_TOKEN')]) {
                     sh '''
-                        npm install -g firebase-tools
-                        firebase use ${FIREBASE_PROJECT_ID}
+                        npm install -g firebase-tools --force
                         firebase deploy --only hosting \
                             --project ${FIREBASE_PROJECT_ID} \
                             --token ${FIREBASE_TOKEN} \
                             --public ${PUBLIC_DIR} \
-                            --message "Jenkins build #${BUILD_NUMBER}"
+                            --message "Jenkins build #${BUILD_NUMBER} - ${GIT_COMMIT}"
                     '''
                 }
             }
@@ -55,13 +59,13 @@ pipeline {
 
     post {
         success {
-            echo 'Successfully deployed to Firebase Hosting!'
+            echo 'Deployed successfully to Firebase Hosting!'
         }
         failure {
             echo 'Deployment failed – check the logs above'
         }
         always {
-            cleanWs()   // clean workspace after each run
+            cleanWs(cleanWhenNotBuilt: false, cleanWhenFailure: true, cleanWhenSuccess: true)
         }
     }
 }
