@@ -9,7 +9,7 @@ pipeline {
     triggers { pollSCM('H/10 * * * *') }
 
     environment {
-        FIREBASE_PROJECT = 'automation-hosting'
+        FIREBASE_PROJECT = 'jenkins-proj-ade17'
         PUBLIC_DIR       = 'dist'
     }
 
