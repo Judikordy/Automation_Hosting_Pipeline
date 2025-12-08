@@ -22,7 +22,7 @@ pipeline {
 
         stage('Install Dependencies') {
             steps {
-                bat 'npm ci'
+                bat 'npm install'   // works even without package-lock.json
             }
         }
 
