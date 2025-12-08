@@ -2,70 +2,51 @@ pipeline {
     agent any
 
     options {
-        skipDefaultCheckout(true)      // Crucial line
-        disableConcurrentBuilds()      // Bonus: prevents overlapping builds
+        skipDefaultCheckout(true)
+        disableConcurrentBuilds()
     }
 
-    triggers {
-        pollSCM('H/5 * * * *')
-    }
+    triggers { pollSCM('H/10 * * * *') }
 
     environment {
-        FIREBASE_PROJECT_ID         = 'automation-hosting'
-        PUBLIC_DIR                  = 'dist'
-        FIREBASE_TOKEN_CREDENTIALS  = 'firebase-service-account-json'
+        FIREBASE_PROJECT = 'automation-hosting'
+        PUBLIC_DIR       = 'dist'
     }
 
     stages {
         stage('Checkout') {
             steps {
-                echo 'Checking out code...'
-                git url: 'https://github.com/Judikordy/Automation_Hosting_Pipeline.git',
-                    branch: 'main',
-                    credentialsId: 'd4a3d8ac-4d36-4253-83dd-6c932125da3c'
+                checkout scm
             }
         }
 
         stage('Install Dependencies') {
             steps {
-                echo 'Installing npm packages...'
-                sh 'npm ci'
+                bat 'npm ci'
             }
         }
 
         stage('Build') {
             steps {
-                echo 'Building the app...'
-                sh 'npm run build'
+                bat 'npm run build'
             }
         }
 
         stage('Deploy to Firebase Hosting') {
             steps {
-                echo 'Deploying to Firebase Hosting...'
-                withCredentials([string(credentialsId: env.FIREBASE_TOKEN_CREDENTIALS, variable: 'FIREBASE_TOKEN')]) {
-                    sh '''
-                        npm install -g firebase-tools --force
-                        firebase deploy --only hosting \
-                            --project ${FIREBASE_PROJECT_ID} \
-                            --token ${FIREBASE_TOKEN} \
-                            --public ${PUBLIC_DIR} \
-                            --message "Jenkins build #${BUILD_NUMBER} - ${GIT_COMMIT}"
-                    '''
+                withCredentials([string(credentialsId: 'firebase-service-account-json', variable: 'TOKEN')]) {
+                    bat """
+                        npm install -g firebase-tools
+                        firebase deploy --only hosting --project %FIREBASE_PROJECT% --token "%TOKEN%" --public %PUBLIC_DIR% --message "Jenkins build #${BUILD_NUMBER}"
+                    """
                 }
             }
         }
     }
 
     post {
-        success {
-            echo 'Deployed successfully to Firebase Hosting!'
-        }
-        failure {
-            echo 'Deployment failed – check the logs above'
-        }
-        always {
-            cleanWs(cleanWhenNotBuilt: false, cleanWhenFailure: true, cleanWhenSuccess: true)
-        }
+        success { echo 'Deployed successfully! Check https://automation-hosting.web.app' }
+        failure { echo 'Deployment failed' }
+        always  { cleanWs() }
     }
 }
